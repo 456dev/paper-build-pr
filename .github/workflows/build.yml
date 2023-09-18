@@ -64,7 +64,8 @@ jobs:
               },
             );
 
-            const pull_requests = labeledOpenPrs.repository.pullRequests.nodes
+            console.log(labeledOpenPrs)
+            const pull_requests = labeledOpenPrs.data.repository.pullRequests.nodes
 
 
             let prs = []
