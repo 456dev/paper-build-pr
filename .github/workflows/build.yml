@@ -118,7 +118,6 @@ jobs:
     needs: gather-prs
     continue-on-error: true
     strategy:
-      max-parallel: 3
       fail-fast: false
       matrix:
         pr: ${{fromJson(needs.gather-prs.outputs.prs)}}
