@@ -1,0 +1,186 @@
+---
+name: Build Paper PRs
+concurrency:
+  cancel-in-progress: true
+  group: build-paper-pr
+on: 
+  # schedule:
+    # Run every hour, offset by 27 mins
+    # - cron: 27 * * * *
+  workflow_dispatch: {}
+env:
+  TARGET_OWNER: "PaperMC"
+  TARGET_REPO: "Paper"
+  TARGET_BRANCH: "master"
+  TARGET_LABEL: "build-pr-jar"
+jobs:
+  gather-prs:
+    name: Gather PRs
+    runs-on: ubuntu-22.04
+    steps:
+      - name: "Get Upstream PRs"
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { TARGET_OWNER, TARGET_REPO, TARGET_BRANCH, TARGET_LABEL } = process.env
+            const { labeledOpenPrs } = await github.graphql.paginate(
+              `
+              query labeledOpenPrs($owner: String!, $repo: String!, $targetbranch: String!, $targetlabel: String!, $cursor: String) {
+                repository(owner: $owner, name: $repo) {
+                  pullRequests(
+                    first: 100
+                    after: $cursor
+                    baseRefName: $targetbranch
+                    states: OPEN
+                    orderBy: {field: UPDATED_AT, direction: DESC}
+                    labels: [$targetlabel]
+                  ) {
+                    nodes {
+                      number
+                      headRef {
+                        name
+                        target {
+                          oid
+                        }
+                        repository {
+                          nameWithOwner
+                        }
+                      }
+                    }
+                    pageInfo {
+                      hasNextPage
+                      endCursor
+                    }
+                  }
+                }
+              }
+              `,
+              {
+                owner: TARGET_OWNER,
+                repo: TARGET_REPO,
+                targetbranch: TARGET_BRANCH,
+                targetlabel: TARGET_LABEL,
+              },
+            );
+
+            const pull_requests = labeledOpenPrs.repository.pullRequests.nodes
+
+
+            let prs = []
+            let pr_info = {}
+
+            prs.push(-1)
+            pr_info[-1] = {
+              headBranch: TARGET_BRANCH,
+              headCommit: "HEAD",
+              headRepo: `${TARGET_OWNER}/${TARGET_REPO}`,
+            }
+
+            for (const pull of pull_requests) {
+              prs.push(pull.number)
+              pr_info[pull.number] = {
+                headBranch: pull.headRef.name,
+                headCommit: pull.headRef.target.oid,
+                headRepo: pull.headRef.repository.nameWithOwner,
+              }
+            }
+
+            // output = prs, truncated to 256 items
+            prs_truncated = prs.slice(0, 256)
+            pr_info_truncated = {}
+            for (const pr of prs_truncated) {
+              pr_info_truncated[pr] = pr_info[pr]
+            }
+            core.setOutput("prs", prs_truncated)
+            core.setOutput("pr_info", pr_info_truncated)
+
+
+            // send output message if it was truncated
+            if (prs.length > 256) {
+              core.warning(`Truncated output to 256 items, ${prs.length - 256} items were omitted`)
+            }
+
+  build:
+    permissions:
+      packages: write
+    needs: gather-prs
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        pr: ${{needs.gather-prs.outputs.prs}}
+    name: Build PR ${{matrix.pr}} from ${{fromJson(needs.gather-prs.outputs.pr_info)[matrix.pr].headRepo}} branch ${{fromJson(needs.gather-prs.outputs.pr_info)[matrix.pr].headBranch}}
+    env:
+      pr: ${{matrix.pr}}
+      repo: ${{fromJson(needs.gather-prs.outputs.pr_info)[matrix.pr].headRepo}}
+      branch: ${{fromJson(needs.gather-prs.outputs.pr_info)[matrix.pr].headBranch}}
+      commit: ${{fromJson(needs.gather-prs.outputs.pr_info)[matrix.pr].headCommit}}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{env.repo}}
+          ref: ${{env.branch}}
+          path: "repo"
+
+      - name: edit build config
+        run: |
+          # change group (TODO is this needed or is it just to where it get generated)
+          sed -i 's/"io.papermc.paper:/providers.gradleProperty("group").get()+":/g' build.gradle.kts
+
+          # change repo location
+          sed -i 's/maven("https://repo.papermc.io/repository/maven-snapshots/")/maven("https://maven.pkg.github.com/the456gamer/paper-build-pr/")/g' build.gradle.kts
+
+
+      - uses: actions/setup-java@v3
+        with:
+          java-version: "17"
+          distribution: "temurin"
+      
+      - uses: gradle/wrapper-validation-action@v1
+
+      - name: Setup and Cache Gradle
+        uses: gradle/gradle-build-action@v2
+        with: 
+          gradle-version: wrapper
+          build-root-directory: repo
+          # only cache once, this is true for the first job, which is always offical repo
+          cache-read-only: ${{fromJson(needs.gather-prs.outputs.prs)[0] == matrix.pr}}
+
+      - name: "Apply Patches"
+        run: |
+          cd repo
+          git config --global user.email "no-reply@github.com"
+          git config --global user.name "Github Actions"
+          ./gradlew applyPatches --stacktrace
+
+      - name: Build server
+        run: |
+          cd repo
+          ./gradlew build --stacktrace
+
+      - name: Create Paperclip Jar
+        run: |
+          cd repo
+          ./gradlew createReobfPaperclipJar --stacktrace
+
+      - name: Upload Paperclip Jar
+        uses: actions/upload-artifact@v3
+        with:
+          name: "paper server jar"
+          path: "repo/build/libs/paper-paperclip-*-reobf.jar"
+        
+      - name: publish bundle (offical)
+        if: ${{ matrix.pr == -1}}
+        run: |
+          cd repo
+          # publish to local repo
+          ORG_GRADLE_PROJECTpaperSnapshotsUsername=secret-user ORG_GRADLE_PROJECT_paperSnapshotsPassword=${{secrets.GITHUB_TOKEN}} ./gradlew publishAllPublicationsToPaperSnapshotsRepository -PpublishDevBundle -Pgroup=io.github.the456gamer.paper-build.offical.paper --stacktrace
+
+      - name: publish bundle (other)
+        if: ${{ matrix.pr != -1}}
+        run: |
+          cd repo
+          # publish to local repo
+          ORG_GRADLE_PROJECTpaperSnapshotsUsername=secret-user ORG_GRADLE_PROJECT_paperSnapshotsPassword=${{secrets.GITHUB_TOKEN}} ./gradlew publishAllPublicationsToPaperSnapshotsRepository -PpublishDevBundle -Pgroup=io.github.the456gamer.paper-build-pr.${{matrix.pr}}.paper --stacktrace
+
