@@ -15,11 +15,15 @@ env:
   TARGET_LABEL: "build-pr-jar"
 jobs:
   gather-prs:
+    outputs:
+      prs: ${{ steps.get_prs.outputs.prs }}
+      pr_info: ${{ steps.get_prs.outputs.pr_info }}
     name: Gather PRs
     runs-on: ubuntu-22.04
     steps:
       - name: "Get Upstream PRs"
         uses: actions/github-script@v6
+        id: get_prs
         with:
           script: |
             const { TARGET_OWNER, TARGET_REPO, TARGET_BRANCH, TARGET_LABEL } = process.env
