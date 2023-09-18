@@ -142,7 +142,7 @@ jobs:
           sed -i 's/"io.papermc.paper:/providers.gradleProperty("group").get()+":/g' build.gradle.kts
 
           # change repo location
-          sed -i 's/maven("https://repo.papermc.io/repository/maven-snapshots/")/maven("https://maven.pkg.github.com/the456gamer/paper-build-pr/")/g' build.gradle.kts
+          sed -i 's@maven("https://repo.papermc.io/repository/maven-snapshots/")@maven("https://maven.pkg.github.com/the456gamer/paper-build-pr/")@g' build.gradle.kts
 
 
       - uses: actions/setup-java@v3
