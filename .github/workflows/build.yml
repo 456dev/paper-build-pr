@@ -16,8 +16,8 @@ env:
 jobs:
   gather-prs:
     outputs:
-      prs: ${{ fromJson(steps.get_prs.outputs.prs) }}
-      pr_info: ${{ fromJson(steps.get_prs.outputs.pr_info) }}
+      prs: ${{ steps.get_prs.outputs.prs }}
+      pr_info: ${{ steps.get_prs.outputs.pr_info }}
     name: Gather PRs
     runs-on: ubuntu-22.04
     steps:
@@ -120,13 +120,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        pr: ${{needs.gather-prs.outputs.prs}}
-    name: Build PR ${{matrix.pr}} from ${{needs.gather-prs.outputs.pr_info[matrix.pr].headRepo}} branch ${{needs.gather-prs.outputs.pr_info[matrix.pr].headBranch}}
+        pr: ${{fromJson(needs.gather-prs.outputs.prs)}}
+    name: Build PR ${{matrix.pr}} from ${{fromJson(needs.gather-prs.outputs.pr_info)[matrix.pr].headRepo}} branch ${{fromJson(needs.gather-prs.outputs.pr_info)[matrix.pr].headBranch}}
     env:
       pr: ${{matrix.pr}}
-      repo: ${{needs.gather-prs.outputs.pr_info[matrix.pr].headRepo}}
-      branch: ${{needs.gather-prs.outputs.pr_info[matrix.pr].headBranch}}
-      commit: ${{needs.gather-prs.outputs.pr_info[matrix.pr].headCommit}}
+      repo: ${{fromJson(needs.gather-prs.outputs.pr_info)[matrix.pr].headRepo}}
+      branch: ${{fromJson(needs.gather-prs.outputs.pr_info)[matrix.pr].headBranch}}
+      commit: ${{fromJson(needs.gather-prs.outputs.pr_info)[matrix.pr].headCommit}}
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -157,7 +157,7 @@ jobs:
           gradle-version: wrapper
           build-root-directory: repo
           # only cache once, this is true for the first job, which is always offical repo
-          cache-read-only: ${{needs.gather-prs.outputs.prs[0] == matrix.pr}}
+          cache-read-only: ${{fromJson(needs.gather-prs.outputs.prs)[0] == matrix.pr}}
 
       - name: "Apply Patches"
         run: |
