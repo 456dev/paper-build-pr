@@ -118,6 +118,7 @@ jobs:
     needs: gather-prs
     continue-on-error: true
     strategy:
+      max-parallel: 3
       fail-fast: false
       matrix:
         pr: ${{fromJson(needs.gather-prs.outputs.prs)}}
@@ -180,7 +181,7 @@ jobs:
       - name: Upload Paperclip Jar
         uses: actions/upload-artifact@v3
         with:
-          name: "paper server jar"
+          name: "paper server jar ${{env.repo}}@${{env.branch}}"
           path: "repo/build/libs/paper-paperclip-*-reobf.jar"
         
       - name: publish bundle (offical)
