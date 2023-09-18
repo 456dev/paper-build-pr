@@ -23,7 +23,7 @@ jobs:
         with:
           script: |
             const { TARGET_OWNER, TARGET_REPO, TARGET_BRANCH, TARGET_LABEL } = process.env
-            const { labeledOpenPrs } = await github.graphql.paginate(
+            const { labeledOpenPrs } = await github.graphql(
               `
               query labeledOpenPrs($owner: String!, $repo: String!, $targetbranch: String!, $targetlabel: String!, $cursor: String) {
                 repository(owner: $owner, name: $repo) {
@@ -35,6 +35,7 @@ jobs:
                     orderBy: {field: UPDATED_AT, direction: DESC}
                     labels: [$targetlabel]
                   ) {
+                    totalCount
                     nodes {
                       number
                       headRef {
@@ -85,8 +86,14 @@ jobs:
               }
             }
 
+            // max in a matrix. broken by lack of pagation atm 
+            // amount_to_run = 256
+
+            // max returnable by the api + 1
+            amount_to_run = 101
+
             // output = prs, truncated to 256 items
-            prs_truncated = prs.slice(0, 256)
+            prs_truncated = prs.slice(0, amount_to_run)
             pr_info_truncated = {}
             for (const pr of prs_truncated) {
               pr_info_truncated[pr] = pr_info[pr]
@@ -96,8 +103,8 @@ jobs:
 
 
             // send output message if it was truncated
-            if (prs.length > 256) {
-              core.warning(`Truncated output to 256 items, ${prs.length - 256} items were omitted`)
+            if (prs.length > amount_to_run) {
+              core.warning(`Truncated output to ${amount_to_run} items, ${prs.length - amount_to_run} items were omitted`)
             }
 
   build:
