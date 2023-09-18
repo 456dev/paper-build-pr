@@ -198,9 +198,9 @@ jobs:
           ORG_GRADLE_PROJECT_the456gamerSnapshotsPassword: ${{secrets.GITHUB_TOKEN}}
         run: |
           cd repo
-          ./gradlew paper-api:publishMavenPublicationsToThe456gamerSnapshotsRepository \
-            paper-server:publishMavenPublicationsToThe456gamerSnapshotsRepository \
-            publishDevBundlePublicationsToThe456gamerSnapshotsRepository \
+          ./gradlew paper-api:publishMavenPublicationToThe456gamerSnapshotsRepository \
+            paper-mojangapi:publishMavenPublicationToThe456gamerSnapshotsRepository \
+            publishDevBundlePublicationToThe456gamerSnapshotsRepository \
             -PpublishDevBundle -Pgroup=dev.the456gamer.paper.offical --stacktrace
 
       - name: publish bundle (other)
@@ -210,9 +210,9 @@ jobs:
           ORG_GRADLE_PROJECT_the456gamerSnapshotsPassword: ${{secrets.GITHUB_TOKEN}}
         run: |
           cd repo
-          ./gradlew paper-api:publishMavenPublicationsToThe456gamerSnapshotsRepository \
-            paper-server:publishMavenPublicationsToThe456gamerSnapshotsRepository \
-            publishDevBundlePublicationsToThe456gamerSnapshotsRepository \
+          ./gradlew paper-api:publishMavenPublicationToThe456gamerSnapshotsRepository \
+            paper-mojangapi:publishMavenPublicationToThe456gamerSnapshotsRepository \
+            publishDevBundlePublicationToThe456gamerSnapshotsRepository \
             -PpublishDevBundle -Pgroup=dev.the456gamer.paper.pr${{matrix.pr}} --stacktrace
 
   # publish-prs:
