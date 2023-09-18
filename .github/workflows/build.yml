@@ -65,7 +65,7 @@ jobs:
             );
 
             console.log(result)
-            const pull_requests = result.data.repository.pullRequests.nodes
+            const pull_requests = result.repository.pullRequests.nodes
 
 
             let prs = []
