@@ -112,7 +112,7 @@ jobs:
               core.warning(`Truncated output to ${amount_to_run} items, ${prs.length - amount_to_run} items were omitted`)
             }
 
-  build:
+  build-pr:
     permissions:
       packages: write
     needs: gather-prs
@@ -138,12 +138,19 @@ jobs:
       - name: edit build config
         run: |
           cd repo
-          # change group (TODO is this needed or is it just to where it get generated)
-          sed -i 's/"io.papermc.paper:/providers.gradleProperty("group").get()+":/g' build.gradle.kts
-
-          # change repo location
-          sed -i 's@maven("https://repo.papermc.io/repository/maven-snapshots/")@maven("https://maven.pkg.github.com/the456gamer/paper-build-pr/")@g' build.gradle.kts
-
+          
+          cat << 'EOF' >> 'build.gradle.kts'
+          allprojects {
+            publishing {
+              repositories {
+                maven("https://maven.pkg.github.com/the456gamer/paper-build-pr/") {
+                  name = "the456gamerSnapshots"
+                  credentials(PasswordCredentials::class)
+                }
+              }
+            }
+          }
+          EOF
 
       - uses: actions/setup-java@v3
         with:
@@ -186,15 +193,39 @@ jobs:
         
       - name: publish bundle (offical)
         if: ${{ matrix.pr == -1}}
+        env:
+          ORG_GRADLE_PROJECT_the456gamerSnapshotsUsername: secret-user
+          ORG_GRADLE_PROJECT_the456gamerSnapshotsPassword: ${{secrets.GITHUB_TOKEN}}
         run: |
           cd repo
-          # publish to local repo
-          ORG_GRADLE_PROJECT_paperSnapshotsUsername=secret-user ORG_GRADLE_PROJECT_paperSnapshotsPassword=${{secrets.GITHUB_TOKEN}} ./gradlew publishAllPublicationsToPaperSnapshotsRepository -PpublishDevBundle -Pgroup=io.github.the456gamer.paper-build.offical.paper --stacktrace
+          ./gradlew paper-api:publishMavenPublicationsToThe456gamerSnapshotsRepository \
+            paper-server:publishMavenPublicationsToThe456gamerSnapshotsRepository \
+            publishDevBundlePublicationsToThe456gamerSnapshotsRepository \
+            -PpublishDevBundle -Pgroup=dev.the456gamer.paper.offical --stacktrace
 
       - name: publish bundle (other)
         if: ${{ matrix.pr != -1}}
+        env:
+          ORG_GRADLE_PROJECT_the456gamerSnapshotsUsername: secret-user
+          ORG_GRADLE_PROJECT_the456gamerSnapshotsPassword: ${{secrets.GITHUB_TOKEN}}
         run: |
           cd repo
-          # publish to local repo
-          ORG_GRADLE_PROJECT_paperSnapshotsUsername=secret-user ORG_GRADLE_PROJECT_paperSnapshotsPassword=${{secrets.GITHUB_TOKEN}} ./gradlew publishAllPublicationsToPaperSnapshotsRepository -PpublishDevBundle -Pgroup=io.github.the456gamer.paper-build-pr.${{matrix.pr}}.paper --stacktrace
+          ./gradlew paper-api:publishMavenPublicationsToThe456gamerSnapshotsRepository \
+            paper-server:publishMavenPublicationsToThe456gamerSnapshotsRepository \
+            publishDevBundlePublicationsToThe456gamerSnapshotsRepository \
+            -PpublishDevBundle -Pgroup=dev.the456gamer.paper.pr${{matrix.pr}} --stacktrace
 
+  # publish-prs:
+  #   continue-on-error: true
+  #   needs: 
+  #     - build-pr
+  #     - gather-prs
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       pr: ${{fromJson(needs.gather-prs.outputs.prs)}}
+  #   runs-on: ubuntu-22.04
+  #   permissions:
+  #     packages: write
+    
+      
