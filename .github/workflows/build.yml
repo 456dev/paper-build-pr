@@ -158,7 +158,8 @@ jobs:
           gradle-version: wrapper
           build-root-directory: repo
           # only cache once, this is true for the first job, which is always offical repo
-          cache-read-only: ${{fromJson(needs.gather-prs.outputs.prs)[0] == matrix.pr}}
+          # cache-read-only: ${{fromJson(needs.gather-prs.outputs.prs)[0] != matrix.pr}}
+          cache-read-only: false
 
       - name: "Apply Patches"
         run: |
@@ -188,12 +189,12 @@ jobs:
         run: |
           cd repo
           # publish to local repo
-          ORG_GRADLE_PROJECTpaperSnapshotsUsername=secret-user ORG_GRADLE_PROJECT_paperSnapshotsPassword=${{secrets.GITHUB_TOKEN}} ./gradlew publishAllPublicationsToPaperSnapshotsRepository -PpublishDevBundle -Pgroup=io.github.the456gamer.paper-build.offical.paper --stacktrace
+          ORG_GRADLE_PROJECT_paperSnapshotsUsername=secret-user ORG_GRADLE_PROJECT_paperSnapshotsPassword=${{secrets.GITHUB_TOKEN}} ./gradlew publishAllPublicationsToPaperSnapshotsRepository -PpublishDevBundle -Pgroup=io.github.the456gamer.paper-build.offical.paper --stacktrace
 
       - name: publish bundle (other)
         if: ${{ matrix.pr != -1}}
         run: |
           cd repo
           # publish to local repo
-          ORG_GRADLE_PROJECTpaperSnapshotsUsername=secret-user ORG_GRADLE_PROJECT_paperSnapshotsPassword=${{secrets.GITHUB_TOKEN}} ./gradlew publishAllPublicationsToPaperSnapshotsRepository -PpublishDevBundle -Pgroup=io.github.the456gamer.paper-build-pr.${{matrix.pr}}.paper --stacktrace
+          ORG_GRADLE_PROJECT_paperSnapshotsUsername=secret-user ORG_GRADLE_PROJECT_paperSnapshotsPassword=${{secrets.GITHUB_TOKEN}} ./gradlew publishAllPublicationsToPaperSnapshotsRepository -PpublishDevBundle -Pgroup=io.github.the456gamer.paper-build-pr.${{matrix.pr}}.paper --stacktrace
 
