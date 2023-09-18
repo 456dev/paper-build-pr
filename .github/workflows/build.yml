@@ -137,6 +137,7 @@ jobs:
 
       - name: edit build config
         run: |
+          cd repo
           # change group (TODO is this needed or is it just to where it get generated)
           sed -i 's/"io.papermc.paper:/providers.gradleProperty("group").get()+":/g' build.gradle.kts
 
