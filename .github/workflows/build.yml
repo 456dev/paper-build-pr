@@ -23,7 +23,7 @@ jobs:
         with:
           script: |
             const { TARGET_OWNER, TARGET_REPO, TARGET_BRANCH, TARGET_LABEL } = process.env
-            const { labeledOpenPrs } = await github.graphql(
+            const result = await github.graphql(
               `
               query labeledOpenPrs($owner: String!, $repo: String!, $targetbranch: String!, $targetlabel: String!, $cursor: String) {
                 repository(owner: $owner, name: $repo) {
@@ -64,8 +64,8 @@ jobs:
               },
             );
 
-            console.log(labeledOpenPrs)
-            const pull_requests = labeledOpenPrs.data.repository.pullRequests.nodes
+            console.log(result)
+            const pull_requests = result.data.repository.pullRequests.nodes
 
 
             let prs = []
