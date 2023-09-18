@@ -158,8 +158,8 @@ jobs:
           gradle-version: wrapper
           build-root-directory: repo
           # only cache once, this is true for the first job, which is always offical repo
-          # cache-read-only: ${{fromJson(needs.gather-prs.outputs.prs)[0] != matrix.pr}}
-          cache-read-only: false
+          cache-read-only: ${{fromJson(needs.gather-prs.outputs.prs)[0] != matrix.pr}}
+          # cache-read-only: false
 
       - name: "Apply Patches"
         run: |
