@@ -181,7 +181,7 @@ jobs:
       - name: Upload Paperclip Jar
         uses: actions/upload-artifact@v3
         with:
-          name: "paper server jar ${{env.repo}}@${{env.branch}}"
+          name: "paper-server-jar-${{ env.pr }}-${{env.commit}}"
           path: "repo/build/libs/paper-paperclip-*-reobf.jar"
         
       - name: publish bundle (offical)
